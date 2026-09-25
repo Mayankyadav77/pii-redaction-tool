@@ -6,10 +6,7 @@ from __future__ import annotations
 import re
 import sys
 from docx import Document
-from faker import Faker
 
-fake = Faker("en_IN")
-fake.seed_instance(20260926)
 
 PERSONS = [
     "Kushal Subbayya Hegde", "Pushpa Kushal Hegde", "Rajesh Kushal Hegde",
