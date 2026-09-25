@@ -9,53 +9,81 @@ st.set_page_config(
 )
 
 st.title("PII Redaction Tool")
-st.write(
-    "Upload a DOCX file to detect and replace supported PII "
-    "with synthetic alternatives."
-)
+st.write("Upload a DOCX file to redact supported PII.")
 
 uploaded = st.file_uploader(
     "Upload DOCX document",
     type=["docx"]
 )
 
-if uploaded is not None and st.button("Redact PII", type="primary"):
+if uploaded is not None:
 
-    with tempfile.TemporaryDirectory() as tmp:
+    st.success(f"File uploaded: {uploaded.name}")
 
-        input_path = Path(tmp) / "input.docx"
-        output_path = Path(tmp) / "redacted_output.docx"
+    if st.button("Redact PII", type="primary"):
 
-        # Save uploaded document
-        input_path.write_bytes(uploaded.getvalue())
+        st.write("### Processing started...")
 
-        try:
-            # redact_docx returns a Redactor object
-            redactor = redact_docx(
-                str(input_path),
-                str(output_path)
+        with tempfile.TemporaryDirectory() as tmp:
+
+            input_path = Path(tmp) / "input.docx"
+            output_path = Path(tmp) / "redacted_output.docx"
+
+            st.write("Step 1: Saving uploaded file...")
+
+            input_path.write_bytes(uploaded.getvalue())
+
+            st.write(
+                f"Step 2: Input file size: "
+                f"{input_path.stat().st_size / (1024 * 1024):.2f} MB"
             )
 
-            # Get statistics from the Redactor object
-            stats = redactor.stats
+            try:
 
-            st.success("Redaction completed successfully!")
+                st.write("Step 3: Starting redaction...")
 
-            st.subheader("Redaction Summary")
-            st.json(stats)
-
-            # Make sure output file was actually created
-            if output_path.exists():
-
-                st.download_button(
-                    label="Download redacted DOCX",
-                    data=output_path.read_bytes(),
-                    file_name="redacted_output.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                redactor = redact_docx(
+                    str(input_path),
+                    str(output_path)
                 )
 
-            else:
-                st.error("Redacted output file was not created.")
+                st.write("Step 4: Redaction function finished.")
 
-        except Exception as exc:
-            st.error(f"Could not process the document: {exc}")
+                stats = redactor.stats
+
+                st.write("Step 5: Redaction statistics:")
+                st.json(stats)
+
+                if output_path.exists():
+
+                    output_size = output_path.stat().st_size
+
+                    st.success(
+                        f"Redaction completed! "
+                        f"Output size: {output_size / (1024 * 1024):.2f} MB"
+                    )
+
+                    with open(output_path, "rb") as f:
+                        output_data = f.read()
+
+                    st.download_button(
+                        label="Download redacted DOCX",
+                        data=output_data,
+                        file_name="redacted_output.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+                else:
+
+                    st.error(
+                        "Redaction function finished, "
+                        "but the output DOCX was not created."
+                    )
+
+            except Exception as exc:
+
+                st.error(
+                    f"Could not process the document: {type(exc).__name__}: {exc}"
+                )
+
+                st.exception(exc)
